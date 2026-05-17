@@ -1,0 +1,20 @@
+# Rust
+target/
+Cargo.lock
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+temp/
+
+# Generated docs
+doc/
