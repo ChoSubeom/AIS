@@ -4,13 +4,17 @@
 
 AIS is a research-driven security framework exploring deterministic trust guarantees for AI inference infrastructure.
 
-The project is inspired by the architectural role of TLS in network security, but focuses specifically on:
+The project is inspired by the architectural role of TLS in network security and focuses on:
 
 * model integrity
 * cryptographic attestation
 * authenticated inference sessions
 * tamper-evident auditability
 * capability-based authorization
+
+AIS is intended as a complement to TLS, not a replacement.
+Most transport-layer security properties are already covered by TLS + mTLS.
+AIS explores what an additional application-layer trust layer for AI inference might look like.
 
 AIS is **NOT** an alignment framework or a general AI safety system.
 
@@ -467,6 +471,15 @@ Additional supporting material:
 /docs/threat-model/
 /docs/architecture/
 /docs/research/
+```
+
+Research notes (skeptical analysis):
+
+```text
+docs/research/why_ais.md               — purpose re-evaluation after analysis
+docs/research/tls_overlap.md           — overlap with TLS / mTLS
+docs/research/deployment_assumptions.md — realistic deployment constraints
+docs/research/threat_model_limits.md   — what the threat model does and does not cover
 ```
 
 ---
