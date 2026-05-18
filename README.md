@@ -1,8 +1,8 @@
 # AIS — AI Security Layer
 
-> Deterministic cryptographic trust infrastructure for AI inference systems.
+> Experimental deterministic cryptographic trust layer for AI inference systems.
 
-AIS is a research-driven security framework designed to provide deterministic trust guarantees for AI inference infrastructure.
+AIS is a research-driven security framework exploring deterministic trust guarantees for AI inference infrastructure.
 
 The project is inspired by the architectural role of TLS in network security, but focuses specifically on:
 
@@ -20,7 +20,11 @@ AIS is **NOT** an alignment framework or a general AI safety system.
 
 ⚠️ EXPERIMENTAL RESEARCH PROTOTYPE
 
-AIS is currently an early-stage research and engineering project.
+Important:
+
+AIS is currently a research prototype exploring deterministic trust mechanisms for AI inference systems.
+
+The project is actively evolving and architectural assumptions may change significantly.
 
 The current prototype includes:
 
@@ -31,9 +35,34 @@ The current prototype includes:
 * OpenAI-compatible proxy MVP
 * runnable security demonstrations
 
-AIS is now at the stage of proving **practical security usefulness**.
+AIS is currently focused on evaluating **practical usefulness and security value**.
 
 Most components described in the specification are intentionally deferred until AIS-Core stabilizes.
+
+---
+
+# Quick Start
+
+Build the workspace:
+
+```bash
+cargo build
+```
+
+Run tests:
+
+```bash
+cargo test --workspace
+```
+
+Run demonstrations:
+
+```bash
+cargo run --example replay_attack_demo -p ais-demos
+cargo run --example tamper_demo -p ais-demos
+cargo run --example rogue_model_demo -p ais-demos
+cargo run --example openai_proxy_demo -p ais-demos
+```
 
 ---
 
@@ -201,6 +230,8 @@ ais/
 │   └── ais-semantic/      # Experimental layer
 │
 ├── demos/
+│   ├── Cargo.toml
+│   ├── src/
 │   └── examples/
 │       ├── replay_attack_demo.rs
 │       ├── tamper_demo.rs
@@ -213,13 +244,14 @@ ais/
 │   ├── architecture/
 │   └── research/
 │
-├── scripts/
+├── SPECIFICATION.md
+├── IMPLEMENTATION_GUIDANCE.md
 └── README.md
 ```
 
 ---
 
-# Planned Components
+# Project Components
 
 | Component      | Purpose                         | Status          |
 | -------------- | ------------------------------- | --------------- |
@@ -237,7 +269,7 @@ ais/
 
 AIS includes runnable demonstrations showing concrete security properties.
 
-These examples are intended to show **practical usefulness**, not just implementation completeness.
+These examples are intended to demonstrate **practical usefulness**, not merely implementation completeness.
 
 ## Replay Attack Prevention
 
@@ -249,8 +281,8 @@ cargo run --example replay_attack_demo -p ais-demos
 
 Shows:
 
-* without AIS → replayed request accepted
-* with AIS → replayed request deterministically rejected
+* baseline behavior → replay not prevented
+* with AIS → replay deterministically rejected
 
 Security property demonstrated:
 
@@ -268,7 +300,7 @@ cargo run --example tamper_demo -p ais-demos
 
 Shows:
 
-* request payload modified in transit
+* tampered authenticated session payload
 * integrity verification failure
 * request rejected (fail-closed)
 
@@ -325,7 +357,43 @@ Demonstrates:
 
 Security property demonstrated:
 
-> AIS functioning as a real inference trust layer.
+> AIS functioning as an experimental inference trust layer.
+
+---
+
+# Benchmarks
+
+AIS includes a benchmark suite (`ais-bench`) for quantitative evaluation of overhead.
+
+Run the full suite:
+
+```bash
+cargo run --bin ais-bench -p ais-bench
+```
+
+Run individual benchmarks:
+
+```bash
+cargo run --example bench_cert    -p ais-bench
+cargo run --example bench_session -p ais-bench
+cargo run --example bench_replay  -p ais-bench
+cargo run --example bench_proxy   -p ais-bench
+```
+
+## Indicative Results
+
+> ⚠️ These measurements were collected on Apple Silicon using local loopback and release builds.
+> They are indicative measurements only and not general performance guarantees.
+
+| Operation                      | Median latency  | Throughput        |
+| ------------------------------ | --------------- | ----------------- |
+| Certificate verification       | ~26 µs          | ~33,000 ops/s     |
+| Session frame validation       | ~375 ns         | ~2,500,000 ops/s  |
+| Replay attack rejection        | < 1 ns (p99: ~42 ns) | ~31,000,000 ops/s |
+| Proxy overhead (AIS vs direct) | +~38 µs         | —                 |
+
+Proxy measurements include the full HTTP round-trip over local loopback (5,000 iterations).
+Replay rejection median is below OS timer resolution on Apple Silicon; p99 reflects occasional scheduling jitter.
 
 ---
 
@@ -335,8 +403,8 @@ AIS-Core primarily protects against:
 
 | Threat                   | Mitigation                    |
 | ------------------------ | ----------------------------- |
-| Model tampering          | AI Certificate + Attestation  |
-| Rogue model distribution | Certificate chain validation  |
+| Model tampering          | AI Certificate verification   |
+| Rogue model distribution | Certificate validation        |
 | MITM attacks             | Authenticated session framing |
 | Session hijacking        | Session key binding           |
 | Replay attacks           | Sequence counter validation   |
@@ -354,7 +422,7 @@ AIS does **NOT** attempt to solve:
 
 # MVP Scope
 
-Phase 1 implementation target:
+Current implementation scope:
 
 * SHA3-256 hashing
 * Ed25519 signatures
@@ -364,6 +432,7 @@ Phase 1 implementation target:
 * Session framing
 * Audit chain
 * Proxy MVP
+* Runnable security demonstrations
 
 Example:
 
@@ -384,7 +453,7 @@ ais-cli verify-model \
 
 # Documentation
 
-Detailed specifications are available in:
+Core documents:
 
 ```text
 SPECIFICATION.md
@@ -470,4 +539,4 @@ Do **NOT** use AIS in production environments without independent review and aud
 
 # One-Line Summary
 
-> AIS provides deterministic cryptographic trust infrastructure for AI inference systems.
+> AIS explores deterministic cryptographic trust mechanisms for AI inference systems.
