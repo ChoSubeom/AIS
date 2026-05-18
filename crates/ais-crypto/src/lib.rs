@@ -17,7 +17,7 @@ pub mod signing;
 
 pub use error::CryptoError;
 pub use hash::{sha3_256, Sha3Hash, SHA3_256_LENGTH};
-pub use random::generate_private_key;
+pub use random::{generate_private_key, secure_random_bytes};
 pub use signing::{
     public_key_from_private_key, sign, verify, PrivateKeyBytes, PublicKeyBytes, SignatureBytes,
     PRIVATE_KEY_LENGTH, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH,
