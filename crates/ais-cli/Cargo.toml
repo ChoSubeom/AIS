@@ -1,0 +1,19 @@
+[package]
+name = "ais-cli"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Minimal deterministic CLI for AIS-Core."
+
+[[bin]]
+name = "ais-cli"
+path = "src/main.rs"
+
+[dependencies]
+ais-audit = { path = "../ais-audit" }
+ais-cert = { path = "../ais-cert" }
+ais-crypto = { path = "../ais-crypto" }
+ciborium = "0.2"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
