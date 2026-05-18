@@ -1,0 +1,13 @@
+[package]
+name = "ais-audit"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Minimal deterministic audit chain for AIS-Core."
+
+[dependencies]
+ais-crypto = { path = "../ais-crypto" }
+ciborium = "0.2"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
