@@ -1,0 +1,22 @@
+[package]
+name = "ais-proxy"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Minimal deterministic OpenAI-compatible AIS proxy."
+
+[[bin]]
+name = "ais-proxy"
+path = "src/main.rs"
+
+[dependencies]
+ais-audit = { path = "../ais-audit" }
+ais-crypto = { path = "../ais-crypto" }
+ais-session = { path = "../ais-session" }
+axum = "0.7"
+hex = "0.4"
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
