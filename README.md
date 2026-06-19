@@ -1,555 +1,74 @@
-# AIS — AI Security Layer
+# AIS — MCP Tool Integrity
 
-> Experimental deterministic cryptographic trust layer for AI inference systems.
+> Pin and verify the SHA3-256 hash of each MCP tool's definition to detect tool poisoning.
 
-AIS is a research-driven security framework exploring deterministic trust guarantees for AI inference infrastructure.
+MCP servers advertise tools as `{ name, description, inputSchema }`. An agent
+decides whether and how to call a tool from exactly those fields. **Tool
+poisoning** is the attack where a server keeps a tool's `name` stable but
+silently changes its `description` or `inputSchema` after the user has come to
+trust it — the agent then follows attacker-controlled instructions while the
+tool still looks the same.
 
-The project is inspired by the architectural role of TLS in network security and focuses on:
+Checking the tool *name* (what OAuth scopes or a JWT `aud` claim do) cannot catch
+this. AIS pins a SHA3-256 hash over each tool's full definition and re-verifies
+it later: any change to the description or schema flips the hash and is reported
+as drift. Field order and whitespace are normalized, so semantically identical
+definitions do not produce false drift.
 
-* model integrity
-* cryptographic attestation
-* authenticated inference sessions
-* tamper-evident auditability
-* capability-based authorization
-
-AIS is intended as a complement to TLS, not a replacement.
-Most transport-layer security properties are already covered by TLS + mTLS.
-AIS explores what an additional application-layer trust layer for AI inference might look like.
-
-AIS is **NOT** an alignment framework or a general AI safety system.
-
----
-
-# Status
-
-⚠️ EXPERIMENTAL RESEARCH PROTOTYPE
-
-Important:
-
-AIS is currently a research prototype exploring deterministic trust mechanisms for AI inference systems.
-
-The project is actively evolving and architectural assumptions may change significantly.
-
-The current prototype includes:
-
-* deterministic cryptographic primitives
-* AI Certificate verification
-* authenticated session framing
-* tamper-evident audit chains
-* OpenAI-compatible proxy MVP
-* runnable security demonstrations
-
-AIS is currently focused on evaluating **practical usefulness and security value**.
-
-Most components described in the specification are intentionally deferred until AIS-Core stabilizes.
+This is the narrowed scope of the project. The earlier, broader "AI security
+layer" exploration is documented — and critiqued — under [`docs/research/`](docs/research/);
+that analysis is why the project now targets this one concrete, current problem
+instead.
 
 ---
 
-# Quick Start
+## Layout
 
-Build the workspace:
+```text
+crates/
+  ais-crypto/          # SHA3-256 / Ed25519 primitives (reused)
+  ais-tool-integrity/  # pin/verify library + CLI
+.claude/skills/
+  mcp-tool-integrity/  # Claude Code skill wrapping the CLI
+docs/research/         # skeptical analysis that motivated the narrowing
+```
+
+## Build & test
 
 ```bash
 cargo build
+cargo test
 ```
 
-Run tests:
+## CLI
 
 ```bash
-cargo test --workspace
+# 1. Pin the trusted state (once, after reviewing the tools)
+cargo run -q -p ais-tool-integrity -- pin --in tools.json --out tools.lock.json
+
+# 2. Verify a later tool list against the baseline
+cargo run -q -p ais-tool-integrity -- verify --lock tools.lock.json --in tools.json
 ```
 
-Run demonstrations:
+Input is an MCP `tools/list` response (`{"tools":[...]}`) or a bare tool array;
+with no `--in` it reads stdin. Exit codes: `0` = clean, `2` = drift detected,
+`1` = usage/IO error. On drift, the changed / added / removed tools are listed;
+a `changed` tool is the poisoning signature.
 
-```bash
-cargo run --example replay_attack_demo -p ais-demos
-cargo run --example tamper_demo -p ais-demos
-cargo run --example rogue_model_demo -p ais-demos
-cargo run --example openai_proxy_demo -p ais-demos
-```
+## As a Claude Code skill
 
----
-
-# Current Priority
-
-The current implementation focus is strictly limited to the AIS-Core MVP.
-
-Highest priority components:
-
-1. AI Certificate format
-2. Model signing & verification
-3. SHA3-256 hashing
-4. Ed25519 signatures
-5. Secure session framing
-6. Audit chain
-7. OpenAI-compatible proxy MVP
-
-The following are intentionally deferred:
-
-* semantic filtering
-* provenance systems
-* transparency logs
-* revocation systems
-* TEE integration
-* advanced policy engines
-* distributed trust infrastructure
+`.claude/skills/mcp-tool-integrity/` exposes the same pin/verify flow as a skill,
+invoked when connecting to or auditing an MCP server. See its `SKILL.md`.
 
 ---
 
-# Goals
+## Scope
 
-AIS aims to provide:
+AIS verifies that an MCP server's advertised tool definitions have not changed
+since they were pinned. It does **not** judge whether a tool is safe, inspect
+tool *outputs*, or replace transport security (TLS/mTLS). It detects silent
+*definition* tampering — and nothing more.
 
-* Vendor-neutral AI trust infrastructure
-* Deterministic security primitives
-* Tamper-evident auditability
-* Secure AI proxy architecture
-* Capability-based agent authorization
-* Cryptographic trust boundaries for inference systems
+## License
 
----
-
-# Non-Goals
-
-AIS does **NOT** attempt to solve:
-
-* AI alignment
-* hallucinations
-* fairness
-* moderation
-* jailbreak-proofing
-* truthful reasoning
-* harmlessness guarantees
-* general AI safety
-
-AIS focuses specifically on infrastructure security and trust.
-
----
-
-# Core Principles
-
-## 1. Deterministic Core
-
-AIS-Core only includes mechanisms that are:
-
-* cryptographically verifiable
-* deterministic
-* formally analyzable
-
-Probabilistic AI classifiers are never trusted for **allow** decisions.
-
----
-
-## 2. Layered Trust
-
-AIS separates components by trust level.
-
-| Component      | Trust Model              |
-| -------------- | ------------------------ |
-| AIS-Core       | Deterministic            |
-| AIS-Capability | Deterministic            |
-| AIS-Semantic   | Probabilistic / Advisory |
-| AIS-Provenance | Research                 |
-
----
-
-## 3. Fail-Closed
-
-Verification failure MUST result in rejection.
-
-Examples:
-
-* invalid certificate → reject model
-* broken session integrity → reject request
-* malformed protocol state → terminate session
-
----
-
-## 4. Vendor Neutrality
-
-AIS is designed to work with:
-
-* OpenAI-compatible APIs
-* local inference runtimes
-* vLLM
-* Ollama
-* GGUF-based systems
-* future agent frameworks
-
-AIS is intentionally vendor-independent.
-
----
-
-# Security Boundary
-
-AIS-Core is intended to provide deterministic infrastructure trust guarantees.
-
-AIS does **NOT** guarantee:
-
-* truthful model outputs
-* safe reasoning
-* alignment
-* harmless behavior
-* semantic correctness
-
-AIS only attempts to guarantee:
-
-* model identity
-* model integrity
-* authenticated communication
-* session integrity
-* audit integrity
-* authorization boundaries
-
----
-
-# Architecture
-
-```text
-Client
-   ↓
-AIS Proxy / Middleware
-   ↓
-AI Backend (OpenAI / vLLM / Ollama / etc.)
-```
-
-AIS operates as a transparent trust layer between clients and AI systems.
-
-The preferred deployment model is proxy-based integration.
-
----
-
-# Repository Structure
-
-```text
-ais/
-├── crates/
-│   ├── ais-crypto/        # Cryptographic primitives
-│   ├── ais-cert/          # AI Certificate handling
-│   ├── ais-session/       # Session management
-│   ├── ais-audit/         # Audit chain
-│   ├── ais-proxy/         # OpenAI-compatible proxy
-│   ├── ais-cli/           # CLI utilities
-│   ├── ais-capability/    # Future extension
-│   └── ais-semantic/      # Experimental layer
-│
-├── demos/
-│   ├── Cargo.toml
-│   ├── src/
-│   └── examples/
-│       ├── replay_attack_demo.rs
-│       ├── tamper_demo.rs
-│       ├── rogue_model_demo.rs
-│       └── openai_proxy_demo.rs
-│
-├── docs/
-│   ├── specification/
-│   ├── threat-model/
-│   ├── architecture/
-│   └── research/
-│
-├── SPECIFICATION.md
-├── IMPLEMENTATION_GUIDANCE.md
-└── README.md
-```
-
----
-
-# Project Components
-
-| Component      | Purpose                         | Status          |
-| -------------- | ------------------------------- | --------------- |
-| AIS-Core       | Deterministic trust layer       | In Progress     |
-| AIS-Cert       | AI Certificates                 | Implemented MVP |
-| AIS-Session    | Secure session framing          | Implemented MVP |
-| AIS-Audit      | Tamper-evident logging          | Implemented MVP |
-| AIS-Proxy      | OpenAI-compatible proxy         | Implemented MVP |
-| AIS-Capability | Capability-based authorization  | Research        |
-| AIS-Semantic   | Probabilistic threat mitigation | Experimental    |
-
----
-
-# Demonstrations
-
-AIS includes runnable demonstrations showing concrete security properties.
-
-These examples are intended to demonstrate **practical usefulness**, not merely implementation completeness.
-
-## Replay Attack Prevention
-
-Run:
-
-```bash
-cargo run --example replay_attack_demo -p ais-demos
-```
-
-Shows:
-
-* baseline behavior → replay not prevented
-* with AIS → replay deterministically rejected
-
-Security property demonstrated:
-
-> replay attack prevention through monotonic sequence validation.
-
----
-
-## Payload Tampering Detection
-
-Run:
-
-```bash
-cargo run --example tamper_demo -p ais-demos
-```
-
-Shows:
-
-* tampered authenticated session payload
-* integrity verification failure
-* request rejected (fail-closed)
-
-Security property demonstrated:
-
-> authenticated session integrity.
-
----
-
-## Rogue Model Detection
-
-Run:
-
-```bash
-cargo run --example rogue_model_demo -p ais-demos
-```
-
-Shows:
-
-* modified model weights rejected
-* forged certificate rejected
-
-Security property demonstrated:
-
-> model integrity verification through AI Certificates.
-
----
-
-## End-to-End Proxy Flow
-
-Run:
-
-```bash
-cargo run --example openai_proxy_demo -p ais-demos
-```
-
-Shows:
-
-```text
-Client
-   ↓
-AIS Proxy
-   ↓
-Mock Backend
-```
-
-Demonstrates:
-
-* session creation
-* request forwarding
-* replay rejection
-* audit append
-* fail-closed behavior
-
-Security property demonstrated:
-
-> AIS functioning as an experimental inference trust layer.
-
----
-
-# Benchmarks
-
-AIS includes a benchmark suite (`ais-bench`) for quantitative evaluation of overhead.
-
-Run the full suite:
-
-```bash
-cargo run --bin ais-bench -p ais-bench
-```
-
-Run individual benchmarks:
-
-```bash
-cargo run --example bench_cert    -p ais-bench
-cargo run --example bench_session -p ais-bench
-cargo run --example bench_replay  -p ais-bench
-cargo run --example bench_proxy   -p ais-bench
-```
-
-## Indicative Results
-
-> ⚠️ These measurements were collected on Apple Silicon using local loopback and release builds.
-> They are indicative measurements only and not general performance guarantees.
-
-| Operation                      | Median latency  | Throughput        |
-| ------------------------------ | --------------- | ----------------- |
-| Certificate verification       | ~26 µs          | ~33,000 ops/s     |
-| Session frame validation       | ~375 ns         | ~2,500,000 ops/s  |
-| Replay attack rejection        | < 1 ns (p99: ~42 ns) | ~31,000,000 ops/s |
-| Proxy overhead (AIS vs direct) | +~38 µs         | —                 |
-
-Proxy measurements include the full HTTP round-trip over local loopback (5,000 iterations).
-Replay rejection median is below OS timer resolution on Apple Silicon; p99 reflects occasional scheduling jitter.
-
----
-
-# Threat Model
-
-AIS-Core primarily protects against:
-
-| Threat                   | Mitigation                    |
-| ------------------------ | ----------------------------- |
-| Model tampering          | AI Certificate verification   |
-| Rogue model distribution | Certificate validation        |
-| MITM attacks             | Authenticated session framing |
-| Session hijacking        | Session key binding           |
-| Replay attacks           | Sequence counter validation   |
-| Audit log tampering      | Hash-chained audit logs       |
-
-AIS does **NOT** attempt to solve:
-
-* model correctness
-* training-time compromise
-* alignment failures
-* adversarial reasoning
-* hallucinations
-
----
-
-# MVP Scope
-
-Current implementation scope:
-
-* SHA3-256 hashing
-* Ed25519 signatures
-* AI Certificate format
-* Model signing CLI
-* Model verification CLI
-* Session framing
-* Audit chain
-* Proxy MVP
-* Runnable security demonstrations
-
-Example:
-
-```bash
-ais-cli sign-model \
-  --model ./model.gguf \
-  --issuer vendor.pem \
-  --output model.cert
-```
-
-```bash
-ais-cli verify-model \
-  --model ./model.gguf \
-  --cert model.cert
-```
-
----
-
-# Documentation
-
-Core documents:
-
-```text
-SPECIFICATION.md
-IMPLEMENTATION_GUIDANCE.md
-```
-
-Additional supporting material:
-
-```text
-/docs/specification/
-/docs/threat-model/
-/docs/architecture/
-/docs/research/
-```
-
-Research notes (skeptical analysis):
-
-```text
-docs/research/why_ais.md               — purpose re-evaluation after analysis
-docs/research/tls_overlap.md           — overlap with TLS / mTLS
-docs/research/deployment_assumptions.md — realistic deployment constraints
-docs/research/threat_model_limits.md   — what the threat model does and does not cover
-```
-
----
-
-# Research Direction
-
-Future research areas may include:
-
-* model transparency logs
-* certificate revocation
-* remote attestation
-* TEE integration
-* provenance-aware inference
-* typed context systems
-* capability-secure AI agents
-
-These directions are intentionally deferred until AIS-Core stabilizes.
-
----
-
-# Security Philosophy
-
-AIS treats AI systems as infrastructure requiring:
-
-* identity
-* integrity
-* authenticated communication
-* authorization boundaries
-* auditability
-
-rather than relying purely on probabilistic safety filtering.
-
----
-
-# Contributing
-
-Contributions are welcome in areas such as:
-
-* Rust systems programming
-* cryptography
-* protocol design
-* AI infrastructure
-* formal verification
-* threat modeling
-* distributed systems
-
----
-
-# License
-
-Planned license:
-
-```text
-Apache License 2.0
-```
-
-(subject to change)
-
----
-
-# Disclaimer
-
-AIS is an experimental research project.
-
-No security guarantees are provided at this stage.
-
-Do **NOT** use AIS in production environments without independent review and auditing.
-
----
-
-# One-Line Summary
-
-> AIS explores deterministic cryptographic trust mechanisms for AI inference systems.
+Apache-2.0.

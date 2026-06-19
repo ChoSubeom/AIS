@@ -1,0 +1,13 @@
+[package]
+name = "ais-tool-integrity"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Pin and verify SHA3-256 hashes of MCP tool definitions to detect tool poisoning (silent tool-definition tampering)."
+
+[dependencies]
+ais-crypto = { path = "../ais-crypto" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+thiserror = "2"
